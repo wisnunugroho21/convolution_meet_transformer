@@ -60,10 +60,9 @@ for epoch in range(epochs):
             running_loss = 0.0
 
 print('Finished Training')
+torch.save(net.state_dict(), PATH + '/net.pth')
 
 # -------------------------------------------------------------------
-
-torch.save(net.state_dict(), PATH + '/net.pth')
 
 correct = 0
 total = 0
@@ -73,60 +72,37 @@ with torch.no_grad():
         images, labels = images.to(device), labels.to(device)
 
         out = net(images)
-        out = out.transpose(1, 2).transpose(2, 3).argmax(-1)
+        _, predictions = out.max(1)
 
-        total   += (labels.shape[0] * labels.shape[1] * labels.shape[2])
-        correct += (out == labels).sum().item()
+        total   += labels.size(0)
+        correct += (predictions == labels).sum().item()
 
 print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
 
 # -------------------------------------------------------------------
 
-def display(display_list, title):
-    for i in range(len(display_list)):
-        plt.subplot(1, len(display_list), i + 1)
-        plt.title(title[i])
+classes = ('plane', 'car', 'bird', 'cat',
+           'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-        disImg  = display_list[i].detach().numpy()
-        plt.imshow(disImg)
-        plt.axis('off')
-    plt.show()
+# prepare to count predictions for each class
+correct_pred = {classname: 0 for classname in classes}
+total_pred = {classname: 0 for classname in classes}
 
-# -------------------------------------------------------------------
+# again no gradients needed
+with torch.no_grad():
+    for data in testloader:
+        images, labels = data
+        images, labels = images.to(device), labels.to(device)
 
-images, labels  = testset[0]
-images          = images.unsqueeze(0)
-images, labels  = images.to(device), labels.to(device)
+        outputs = net(images)
+        _, predictions = outputs.max(1)
 
-out = net(images)
+        for label, prediction in zip(labels, predictions):
+            if label == prediction:
+                correct_pred[classes[label]] += 1
+            total_pred[classes[label]] += 1
 
-disInput    = images.squeeze(0).transpose(0, 1).transpose(1, 2)
-disOutput   = out.squeeze(0).transpose(0, 1).transpose(1, 2).argmax(-1)
-
-display([disInput.cpu(), labels.cpu(), disOutput.cpu()], ['Input Image', 'True Mask', 'Predicted Mask'])
-
-# -----------------------------------------------------------------------------
-
-images, labels  = testset[10]
-images          = images.unsqueeze(0)
-images, labels  = images.to(device), labels.to(device)
-
-out = net(images)
-
-disInput    = images.squeeze(0).transpose(0, 1).transpose(1, 2)
-disOutput   = out.squeeze(0).transpose(0, 1).transpose(1, 2).argmax(-1)
-
-display([disInput.cpu(), labels.cpu(), disOutput.cpu()], ['Input Image', 'True Mask', 'Predicted Mask'])
-
-# ----------------------------------------------------------------------------------
-
-images, labels  = testset[14]
-images          = images.unsqueeze(0)
-images, labels  = images.to(device), labels.to(device)
-
-out = net(images)
-
-disInput    = images.squeeze(0).transpose(0, 1).transpose(1, 2)
-disOutput   = out.squeeze(0).transpose(0, 1).transpose(1, 2).argmax(-1)
-
-display([disInput.cpu(), labels.cpu(), disOutput.cpu()], ['Input Image', 'True Mask', 'Predicted Mask'])
+# print accuracy for each class
+for classname, correct_count in correct_pred.items():
+    accuracy = 100 * float(correct_count) / total_pred[classname]
+    print(f'Accuracy for class: {classname:5s} is {accuracy:.1f} %')
