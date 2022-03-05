@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 from copy import deepcopy
 
-from model.main import MainModel
+from model.improvement.main import MainModel
 
 epochs = 30
 batch_size = 64

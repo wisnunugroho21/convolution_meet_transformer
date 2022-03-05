@@ -5,8 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
-from model.depth_conv import DepthwiseSeparableConv2d
-from model.attention import MultiHeadAttention
+from model.improvement.attention import MultiHeadAttention
 
 class LocalPerceptionUnit(nn.Module):
     def __init__(self, dim: int) -> None:
