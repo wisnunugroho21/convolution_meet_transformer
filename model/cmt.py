@@ -9,11 +9,11 @@ from model.depth_conv import DepthwiseSeparableConv2d
 from model.attention import MultiHeadAttention
 
 class LocalPerceptionUnit(nn.Module):
-    def __init__(self, dim_in: int, dim_out: int) -> None:
+    def __init__(self, dim: int) -> None:
         super().__init__()
 
         self.conv = nn.Sequential(
-            DepthwiseSeparableConv2d(dim_in, dim_out, kernel_size = 3, stride = 1, padding = 1)
+            nn.Conv2d(dim, dim, kernel_size = 3, stride = 1, padding = 1, groups = dim)
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -21,14 +21,14 @@ class LocalPerceptionUnit(nn.Module):
         return x + x1
 
 class LightweightMultiHeadAttention(nn.Module):
-    def __init__(self, heads: int, d_model: int, k: int) -> None:
+    def __init__(self, heads: int, dim: int, k: int) -> None:
         super().__init__()
 
         self.conv = nn.Sequential(
-            DepthwiseSeparableConv2d(d_model, d_model, kernel_size = k, stride = k)
+            nn.Conv2d(dim, dim, kernel_size = k, stride = k, groups = dim)
         )
 
-        self.att = MultiHeadAttention(heads = heads, d_model = d_model)
+        self.att = MultiHeadAttention(heads = heads, d_model = dim)
 
     def forward(self, x: Tensor) -> Tensor:
         B, C, H, W = x.shape
@@ -48,20 +48,17 @@ class InvertedResidualFFN(nn.Module):
         super().__init__()
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(dim, dim * b, kernel_size = 1, stride = 1),
-            nn.GELU(),
-            nn.BatchNorm2d(dim * b)
+            nn.Conv2d(dim, dim * b, kernel_size = 1, stride = 1)            
         )
 
         self.conv2 = nn.Sequential(
-            nn.Conv2d(dim * b, dim * b, kernel_size = 3, stride = 1, padding = 1)
+            nn.GroupNorm(1, dim * b),
+            nn.Conv2d(dim * b, dim * b, kernel_size = 3, stride = 1, padding = 1, groups = dim * b)
         )
 
         self.conv3 = nn.Sequential(
             nn.GELU(),
-            nn.BatchNorm2d(dim * b),
-            nn.Conv2d(dim * b, dim, kernel_size = 1, stride = 1),
-            nn.BatchNorm2d(dim)
+            nn.Conv2d(dim * b, dim, kernel_size = 1, stride = 1)
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -74,7 +71,7 @@ class CMTBlock(nn.Module):
     def __init__(self, dim: int, head: int, k: int, b: int) -> None:
         super().__init__()
 
-        self.lpu    = LocalPerceptionUnit(dim, dim)
+        self.lpu    = LocalPerceptionUnit(dim)
         self.lmhsa  = LightweightMultiHeadAttention(head, dim, k)
         self.irffn  = InvertedResidualFFN(dim, b)
 
