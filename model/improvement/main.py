@@ -18,7 +18,7 @@ class MainModel(nn.Module):
 
         self.stage1 = nn.Sequential(*[CMTBlock(64, head = 1, k = 8, b = 4) for _ in range(3)])
         self.stage2 = nn.Sequential(*[CMTBlock(128, head = 2, k = 4, b = 4) for _ in range(3)])
-        self.stage3 = nn.Sequential(*[CMTBlock(256, head = 4, k = 2, b = 6) for _ in range(3)])
+        self.stage3 = nn.Sequential(*[CMTBlock(256, head = 4, k = 2, b = 4) for _ in range(9)])
         self.stage4 = nn.Sequential(*[CMTBlock(512, head = 8, k = 1, b = 4) for _ in range(3)])
 
         self.downsampler1 = nn.Sequential(
@@ -45,11 +45,9 @@ class MainModel(nn.Module):
             nn.AvgPool2d(kernel_size = 1),
             nn.Flatten(),
             nn.GroupNorm(1, 512),
-            nn.Linear(512, 1280),
+            nn.Linear(512, 64),
             nn.GELU(),
-            nn.Linear(1280, 1000),
-            nn.GELU(),
-            nn.Linear(1000, num_class)
+            nn.Linear(64, num_class)
         )
 
     def forward(self, x: Tensor) -> Tensor:

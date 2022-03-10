@@ -17,9 +17,10 @@ from copy import deepcopy
 
 from model.improvement.main import MainModel
 
-epochs = 30
+epochs = 100
 batch_size = 64
-PATH = '.'
+PATH = 'net.pth'
+load_net = False
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 transform = transforms.Compose([
@@ -37,37 +38,61 @@ testloader = DataLoader(testset, batch_size = batch_size, shuffle = False, num_w
 
 net = MainModel(num_class = 10).to(device)
 
-segoptimizer    = AdamW(net.parameters(), lr = 6e-5)
-segloss         = nn.CrossEntropyLoss()
+optimizer   = AdamW(net.parameters(), lr = 6e-5)
+criterion   = nn.CrossEntropyLoss()
+
+if load_net:
+    print('Loading Weight')
+
+    checkpoint = torch.load(PATH)    
+    net.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+net.train() 
 
 try:
     for epoch in range(epochs):
         running_loss = 0.0
+        epochs_loss = 0.0
+
         for i, data in enumerate(trainloader, 0):
-            segoptimizer.zero_grad()
+            optimizer.zero_grad()
 
             images, labels    = data
             images, labels    = images.to(device), labels.to(device)
 
             out = net(images)
 
-            loss = segloss(out, labels)
+            loss = criterion(out, labels)
             loss.backward()
-            segoptimizer.step()
+            optimizer.step()
 
             running_loss += loss.item()
+            epochs_loss += loss.item()
+
             if i % 200 == 199:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200))
                 running_loss = 0.0
+
+        print('Epoch [%d] loss: %.3f' % (epoch + 1, epochs_loss / i))
 
 except KeyboardInterrupt:
     print('Cancelled by User. Trying to test the model before finishing up.')
 else:
     print('Training completed')
 finally:    
-    torch.save(net.state_dict(), PATH + '/net.pth')
+    torch.save({
+        'model_state_dict': net.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict()
+    }, PATH)
     
     # -------------------------------------------------------------------
+
+    checkpoint = torch.load(PATH)    
+    net.load_state_dict(checkpoint['model_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+    # ---------------------------------------------------------------------
 
     correct = 0
     total = 0

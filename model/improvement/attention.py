@@ -12,7 +12,6 @@ class MultiHeadAttention(nn.Module):
         assert d_model % heads == 0
         self.d_k    = d_model // heads
         self.heads  = heads
-        self.scaled = math.sqrt(d_model)
 
         self.query      = nn.Linear(d_model, d_model)
         self.key        = nn.Linear(d_model, d_model)
