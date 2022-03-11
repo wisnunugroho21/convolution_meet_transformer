@@ -9,7 +9,7 @@ from model.improvement.cmt import CMTBlock
 
 class MainModel(nn.Module):
     def __init__(self, num_class) -> None:
-        super().__init__()
+        super().__init__()        
 
         self.stem = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size = 2, stride = 2),
@@ -43,8 +43,8 @@ class MainModel(nn.Module):
 
         self.out = nn.Sequential(
             nn.AvgPool2d(kernel_size = 1),
-            nn.Flatten(),
             nn.GroupNorm(1, 512),
+            nn.Flatten(),            
             nn.Linear(512, 64),
             nn.GELU(),
             nn.Linear(64, num_class)
