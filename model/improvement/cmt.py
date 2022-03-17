@@ -23,9 +23,9 @@ class LightweightMultiHeadAttention(nn.Module):
     def __init__(self, heads: int, dim: int, k: int) -> None:
         super().__init__()
 
-        self.conv = nn.Sequential(
-            nn.GroupNorm(1, dim),            
+        self.conv = nn.Sequential(                       
             nn.Conv2d(dim, dim, kernel_size = k, stride = k, groups = dim),
+            nn.GroupNorm(1, dim),
         )
 
         self.att = MultiHeadAttention(heads = heads, d_model = dim)
