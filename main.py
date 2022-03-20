@@ -1,23 +1,15 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 
 from torch.utils.data import DataLoader
-from torch.optim import AdamW
 
 import torchvision
 import torchvision.transforms as transforms
 
-from dataloader.PennFudanPedDataset import PennFudanPedDataset
-from dataloader.ClrPennFudanPedDataset import ClrPennFudanPedDataset
-from dataloader.CatsDataset import CatsDataset
-
-import matplotlib.pyplot as plt
-
-from copy import deepcopy
-
 from model.improvement.main import MainModel
 
-epochs = 100
+epochs = 300
 batch_size = 64
 PATH = 'net.pth'
 load_net = False
@@ -26,6 +18,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 train_transform = transforms.Compose([
     transforms.RandAugment(),
     transforms.ToTensor(),
+    transforms.RandomErasing(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
 
 ])
@@ -44,22 +37,31 @@ testloader = DataLoader(testset, batch_size = batch_size, shuffle = False, num_w
 
 # -----------------------------------------------------------------------------------------------------------
 
-net = MainModel(num_class=10).to(device)
+net = MainModel(num_class = 10).to(device)
 
-optimizer = AdamW(net.parameters(), lr=1e-5)
 criterion = nn.CrossEntropyLoss()
+optimizer = optim.AdamW(net.parameters(), lr = 1e-5)
+scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0 = 20)
+
+start_epochs = 0
 
 if load_net:
     print('Loading Weight')
 
     checkpoint = torch.load(PATH)
+
     net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
+    start_epochs = checkpoint['epochs']
+
 net.train()
 
+# ----------------------------------------------------------------------------------------------------------------
+
 try:
-    for epoch in range(epochs):
+    iters = len(trainloader)
+    for epoch in range(start_epochs, epochs):
         running_loss = 0.0
         epochs_loss = 0.0
 
@@ -73,14 +75,15 @@ try:
 
             loss = criterion(out, labels)
             loss.backward()
+            
             optimizer.step()
+            scheduler.step(epoch + i / iters)
 
             running_loss += loss.item()
             epochs_loss += loss.item()
 
-            if i % 200 == 199:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 200))
+            if i % 200 == 199:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200))
                 running_loss = 0.0
 
         print('Epoch [%d] loss: %.3f' % (epoch + 1, epochs_loss / i))
@@ -92,7 +95,8 @@ else:
 finally:
     torch.save({
         'model_state_dict': net.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict()
+        'optimizer_state_dict': optimizer.state_dict(),
+        'epochs': epoch,
     }, PATH)
 
     # -------------------------------------------------------------------

@@ -43,10 +43,9 @@ class MainModel(nn.Module):
 
         self.out = nn.Sequential(
             nn.AvgPool2d(kernel_size = 1),
-            nn.GroupNorm(1, 512),
             nn.Flatten(),            
             nn.Linear(512, 64),
-            nn.GELU(),
+            nn.ReLU(),
             nn.Linear(64, num_class)
         )
 

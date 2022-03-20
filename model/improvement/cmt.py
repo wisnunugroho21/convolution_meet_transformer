@@ -1,8 +1,4 @@
-import math
-import torch
-
 import torch.nn as nn
-import torch.nn.functional as F
 from torch import Tensor
 
 from model.improvement.attention import MultiHeadAttention
@@ -24,8 +20,7 @@ class LightweightMultiHeadAttention(nn.Module):
         super().__init__()
 
         self.conv = nn.Sequential(                       
-            nn.Conv2d(dim, dim, kernel_size = k, stride = k, groups = dim),
-            nn.GroupNorm(1, dim),
+            nn.Conv2d(dim, dim, kernel_size = k, stride = k, groups = dim)
         )
 
         self.att = MultiHeadAttention(heads = heads, d_model = dim)
@@ -52,7 +47,7 @@ class InvertedResidualFFN(nn.Module):
         )
 
         self.conv2 = nn.Sequential(
-            nn.GroupNorm(1, dim * b),
+            nn.BatchNorm2d(dim * b),
             nn.Conv2d(dim * b, dim * b, kernel_size = 3, stride = 1, padding = 1, groups = dim * b)
         )
 
